@@ -15,6 +15,15 @@ list here," not "make the model more accurate."
 Categories are checked in order -- if a frame's labels match more than
 one category, the first match wins. Order the most specific/important
 categories first (e.g. "alarm" before generic "animal"-adjacent stuff).
+
+IMPORTANT: each raw label should appear in exactly ONE category's list.
+If the same label is listed under two categories, whichever category
+comes first in this dict wins EVERY time that label is YAMNet's top
+pick -- the second category becomes structurally unreachable for that
+label. This bit us once already (Siren / Civil defense siren were
+listed under both "alarm" and "siren", which meant "siren" could never
+fire from those two labels). Keep it that way: no duplicates across
+lists.
 """
 
 TARGET_CATEGORIES = {
@@ -30,11 +39,12 @@ TARGET_CATEGORIES = {
         "Buzzer",
         "Smoke detector, smoke alarm",
         "Fire alarm",
-        "Siren",
-        "Civil defense siren",
-        "Ringtone",
-        "Telephone",
-        "Telephone bell ringing",
+        # NOTE: "Telephone" / "Ringtone" / "Telephone bell ringing" were
+        # removed from this list. A ringing phone isn't the "alarm"
+        # concept from the README (smoke alarm / alarm clock), and
+        # reporting it to the user as ALARM is misleading / falsely
+        # urgent. Revisit if you decide phone rings deserve their own
+        # category later.
     ],
     "siren": [
         "Siren",
@@ -77,7 +87,7 @@ def categorize(label):
     return None
 
 
-def categorize_frame(frame_scores, class_names, top_n=5, min_confidence=0.15):
+def categorize_frame(frame_scores, class_names, top_n=5, min_confidence=0.15, debug=False):
     """
     Given one frame's full score vector (521 values) and the YAMNet
     class_names list, look at the top_n highest-scoring labels for that
@@ -96,13 +106,42 @@ def categorize_frame(frame_scores, class_names, top_n=5, min_confidence=0.15):
     the single #1 label, we look a few labels deep, since related labels
     (Doorbell/Bell/Chime/Ding, or Dog/Bark/Animal) often trade places
     depending on background noise.
+
+    If debug=True, also prints the full top_n raw label + score list for
+    this frame, with the one that got chosen (if any) marked with '->'.
+    This is the tool for telling apart genuine model ambiguity (two
+    unrelated raw labels for different real categories both scoring
+    high) from a mapping bug (a raw label sitting in two category lists,
+    or a raw label you forgot to route anywhere). Turn this on whenever
+    a category is flickering between two frames for what looks like the
+    same real-world sound.
     """
     top_indices = frame_scores.argsort()[::-1][:top_n]
 
+    if debug:
+        print("  raw top-{}:".format(top_n))
+
+    chosen_category = None
+    chosen_score = None
+
     for idx in top_indices:
         label = class_names[idx]
+        score = frame_scores[idx]
         category = categorize(label)
-        if category is not None and frame_scores[idx] >= min_confidence:
-            return category, frame_scores[idx]
 
-    return None, None
+        if debug:
+            marker = ""
+            if chosen_category is None and category is not None and score >= min_confidence:
+                marker = "  <- chosen"
+            print("    {:<35} {:.3f}  [{}]{}".format(
+                label, score, category if category else "-", marker
+            ))
+
+        if chosen_category is None and category is not None and score >= min_confidence:
+            chosen_category = category
+            chosen_score = score
+
+    if not debug:
+        return chosen_category, chosen_score
+
+    return chosen_category, chosen_score

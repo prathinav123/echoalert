@@ -28,21 +28,22 @@ class_names = list(pd.read_csv(class_map_path)['display_name'])
 print("Model loaded.\n")
 
 
-def predict_from_waveform(waveform):
-    """
-    Runs YAMNet on a waveform and returns a per-frame breakdown, checking
-    EACH frame individually (frame-level, not averaged -- averaging was
-    diluting short bursts, per your Week 1 notes and yesterday's test).
 
-    Returns a list of (category, confidence) tuples, one per frame,
-    where category is None if that frame didn't match a target sound.
-    """
+"""
+Runs YAMNet on a waveform and returns a per-frame breakdown, checking
+EACH frame individually (frame-level, not averaged -- averaging was
+diluting short bursts, per your Week 1 notes and yesterday's test).
+
+Returns a list of (category, confidence) tuples, one per frame,
+where category is None if that frame didn't match a target sound.
+"""
+def predict_from_waveform(waveform, debug=False):
     scores, embeddings, spectrogram = yamnet_model(waveform)
-    scores_np = scores.numpy()  # shape: (num_frames, 521)
+    scores_np = scores.numpy()
 
     results = []
     for frame_scores in scores_np:
-        category, confidence = categorize_frame(frame_scores, class_names)
+        category, confidence = categorize_frame(frame_scores, class_names, debug=debug)
         results.append((category, confidence))
     return results
 
@@ -52,7 +53,7 @@ def audio_callback(indata, frames, time_info, status):
         print(f"[status] {status}")
 
     waveform = indata[:, 0].astype(np.float32)
-    frame_results = predict_from_waveform(waveform)
+    frame_results = predict_from_waveform(waveform, debug=True)
 
     # A ~1 second chunk contains a couple of YAMNet frames (~0.48s each).
     # Print each frame's result so we can see what's actually happening
