@@ -39,12 +39,19 @@ TARGET_CATEGORIES = {
         "Buzzer",
         "Smoke detector, smoke alarm",
         "Fire alarm",
-        # NOTE: "Telephone" / "Ringtone" / "Telephone bell ringing" were
-        # removed from this list. A ringing phone isn't the "alarm"
-        # concept from the README (smoke alarm / alarm clock), and
-        # reporting it to the user as ALARM is misleading / falsely
-        # urgent. Revisit if you decide phone rings deserve their own
-        # category later.
+        # NOTE: "Telephone" / "Ringtone" / "Telephone bell ringing" used
+        # to live here. They were pulled out because a ringing phone
+        # isn't the "alarm" concept from the README (smoke alarm / alarm
+        # clock) -- but leaving them unmapped meant "alarm" still caught
+        # them by default whenever they showed up in the top-5 alongside
+        # a low-scoring "Alarm" label. They now have their own "phone"
+        # category below instead.
+    ],
+    "phone": [
+        "Telephone",
+        "Ringtone",
+        "Telephone bell ringing",
+        "Telephone dialing, DTMF",
     ],
     "siren": [
         "Siren",
@@ -145,3 +152,15 @@ def categorize_frame(frame_scores, class_names, top_n=5, min_confidence=0.15, de
         return chosen_category, chosen_score
 
     return chosen_category, chosen_score
+
+# Week 2: live mic streaming + YAMNet inference + label mapping
+
+# - mic_stream_test.py: callback-based sd.InputStream at 16kHz, 1s blocks
+# - mic_yamnet_live.py: live YAMNet inference on in-memory audio frames
+# - label_mapping.py: maps YAMNet's 521 labels to target categories
+#   (doorbell, alarm, siren, knock, speech, dog_bark, phone)
+# - Fixed alarm/siren label collision (Siren, Civil defense siren were
+#   duplicated across both lists, making siren unreachable)
+# - Added phone category so Telephone/Ringtone stop defaulting into alarm
+# - Added debug mode to categorize_frame for inspecting raw top-5 labels
+#   per frame when categories disagree"
