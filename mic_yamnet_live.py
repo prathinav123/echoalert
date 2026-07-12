@@ -19,6 +19,7 @@ import pandas as pd
 import sounddevice as sd
 import tensorflow_hub as hub
 
+from alerts import maybe_alert
 from label_mapping import categorize_frame
 from database import init_db, insert_detection
 
@@ -88,6 +89,7 @@ def audio_callback(indata, frames, time_info, status):
             # category (last_category persists across chunk boundaries).
             if category == last_category:
                 insert_detection(category, confidence)
+                maybe_alert(category, confidence)
                 print(f"    -> CONFIRMED + logged ({category}, {confidence:.3f})")
 
             last_category = category
