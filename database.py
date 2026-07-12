@@ -55,7 +55,7 @@ def insert_detection(predicted_label, confidence, db_path=DB_PATH):
     cursor.execute("""
         INSERT INTO detections (timestamp, predicted_label, confidence, actual_label)
         VALUES (?, ?, ?, NULL)
-    """, (datetime.now().isoformat(timespec="seconds"), predicted_label, confidence))
+    """, (datetime.now().isoformat(timespec="seconds"), predicted_label, float(confidence)))
     conn.commit()
     conn.close()
 

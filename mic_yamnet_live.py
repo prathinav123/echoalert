@@ -5,6 +5,12 @@ Week 2, Step 2 (v2): Feed each live 1-second mic window into YAMNet,
 look at frame-level predictions (not averaged), and filter them down
 to EchoAlert's target categories using label_mapping.py.
 
+Week 3 addition: log confirmed detections to the database. A detection
+is only "confirmed" (and written to SQLite) when two consecutive
+frames -- possibly spanning chunk boundaries -- agree on the same
+category. This kills single-frame flicker without diluting real
+sustained sounds the way full averaging would.
+
 Press Ctrl+C to stop.
 """
 
@@ -14,6 +20,7 @@ import sounddevice as sd
 import tensorflow_hub as hub
 
 from label_mapping import categorize_frame
+from database import init_db, insert_detection
 
 # --- Config ---
 SAMPLE_RATE = 16000   # YAMNet requires 16kHz
@@ -27,6 +34,16 @@ class_map_path = yamnet_model.class_map_path().numpy().decode('utf-8')
 class_names = list(pd.read_csv(class_map_path)['display_name'])
 print("Model loaded.\n")
 
+# --- Week 3: set up the database once at startup ---
+init_db()
+
+# --- Week 3: state tracked across callback calls, for the
+# 2-consecutive-frame confirmation rule. This has to live outside
+# audio_callback (not as a local variable) because sounddevice calls
+# audio_callback fresh every ~1s chunk -- a local variable would reset
+# every time and could never "remember" the previous frame's category.
+last_category = None
+last_confidence = None
 
 
 """
@@ -49,6 +66,8 @@ def predict_from_waveform(waveform, debug=False):
 
 
 def audio_callback(indata, frames, time_info, status):
+    global last_category, last_confidence
+
     if status:
         print(f"[status] {status}")
 
@@ -63,6 +82,22 @@ def audio_callback(indata, frames, time_info, status):
         if category is not None:
             print(f"  frame {i}: {category:10s} ({confidence:.3f})")
             matched_any = True
+
+            # Week 3: confirmation rule. Only log when this frame's
+            # category matches the immediately preceding frame's
+            # category (last_category persists across chunk boundaries).
+            if category == last_category:
+                insert_detection(category, confidence)
+                print(f"    -> CONFIRMED + logged ({category}, {confidence:.3f})")
+
+            last_category = category
+            last_confidence = confidence
+        else:
+            # An unmatched frame breaks the streak -- a stray silent/
+            # background frame in between two real detections shouldn't
+            # let them count as "consecutive."
+            last_category = None
+            last_confidence = None
 
     if not matched_any:
         print("  (no target sound detected)")
