@@ -14,7 +14,7 @@ This project demonstrates the practical application of edge-deployed neural netw
 *   **Persistent Logging:** Stores event timestamps, classification labels, and confidence scores in a relational SQLite database for historical analysis.
 
 ## Tech Stack
-*   **Language:** Python 3.x
+*   **Language:** Python 3.11
 *   **Machine Learning:** TensorFlow, Keras, YAMNet
 *   **Audio Processing:** PyAudio, SoundFile, NumPy
 *   **Database:** SQLite
