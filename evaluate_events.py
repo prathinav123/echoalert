@@ -1,11 +1,11 @@
 """
 evaluate_events.py
 
-Week 4 evaluation step. Reads the manually-labeled events_for_labeling.csv
+Day 4 evaluation step. Reads the manually-labeled events_for_labeling.csv
 (event-level ground truth, per the Option A grouping decision) and computes:
     - A confusion matrix: predicted_label vs actual_label
     - Precision and recall per category
-    - A plain-text summary suitable for pasting into your Week 4 writeup
+    - A plain-text summary suitable for pasting into your Day 4 writeup
 
 Usage:
     python evaluate_events.py

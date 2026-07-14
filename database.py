@@ -2,7 +2,7 @@
 database.py
 
 Sets up and manages the SQLite database that logs every sound EchoAlert
-detects. This is the persistence layer Week 3 builds alerts and the
+detects. This is the persistence layer Day 3 builds alerts and the
 Streamlit dashboard on top of.
 
 Schema:
@@ -13,7 +13,7 @@ Schema:
     predicted_label TEXT     -- the mapped category (doorbell, alarm, etc.)
     confidence      REAL     -- YAMNet's confidence score for that frame
     actual_label    TEXT     -- left NULL for now; filled in manually during
-                                Week 4's evaluation pass
+                                Day 4's evaluation pass
 """
 
 import sqlite3

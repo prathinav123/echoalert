@@ -153,7 +153,7 @@ def categorize_frame(frame_scores, class_names, top_n=5, min_confidence=0.15, de
 
     return chosen_category, chosen_score
 
-# Week 2: live mic streaming + YAMNet inference + label mapping
+# Day 2: live mic streaming + YAMNet inference + label mapping
 
 # - mic_stream_test.py: callback-based sd.InputStream at 16kHz, 1s blocks
 # - mic_yamnet_live.py: live YAMNet inference on in-memory audio frames

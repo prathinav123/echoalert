@@ -66,7 +66,7 @@ st.caption(f"Auto-refreshing every {refresh_seconds}s. Last updated: {time.strft
 time.sleep(refresh_seconds)
 st.rerun()
 
-# Week 3: SQLite logging, desktop alerts, Streamlit dashboard
+# Day 3: SQLite logging, desktop alerts, Streamlit dashboard
 
 # - database.py: detections table (id, timestamp, predicted_label,
 #   confidence, actual_label), init_db/insert_detection/get_recent_detections
@@ -80,7 +80,7 @@ st.rerun()
 # - app.py: Streamlit dashboard showing detections-by-category bar chart and
 #   a live, auto-refreshing table of recent detections read from detections.db
 
-# Known open item carried forward to Week 4: alarm/doorbell/knock category
+# Known open item carried forward to Day 4: alarm/doorbell/knock category
 # flicker on tonal/percussive sounds is genuine model ambiguity, not a bug --
 # will be quantified properly via confusion matrix once actual_label is
 # manually tagged.

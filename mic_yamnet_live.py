@@ -1,11 +1,11 @@
 """
 mic_yamnet_live.py
 
-Week 2, Step 2 (v2): Feed each live 1-second mic window into YAMNet,
+Day 2, Step 2 (v2): Feed each live 1-second mic window into YAMNet,
 look at frame-level predictions (not averaged), and filter them down
 to EchoAlert's target categories using label_mapping.py.
 
-Week 3 addition: log confirmed detections to the database. A detection
+Day 3 addition: log confirmed detections to the database. A detection
 is only "confirmed" (and written to SQLite) when two consecutive
 frames -- possibly spanning chunk boundaries -- agree on the same
 category. This kills single-frame flicker without diluting real
@@ -35,10 +35,10 @@ class_map_path = yamnet_model.class_map_path().numpy().decode('utf-8')
 class_names = list(pd.read_csv(class_map_path)['display_name'])
 print("Model loaded.\n")
 
-# --- Week 3: set up the database once at startup ---
+# --- Day 3: set up the database once at startup ---
 init_db()
 
-# --- Week 3: state tracked across callback calls, for the
+# --- Day 3: state tracked across callback calls, for the
 # 2-consecutive-frame confirmation rule. This has to live outside
 # audio_callback (not as a local variable) because sounddevice calls
 # audio_callback fresh every ~1s chunk -- a local variable would reset
@@ -50,7 +50,7 @@ last_confidence = None
 """
 Runs YAMNet on a waveform and returns a per-frame breakdown, checking
 EACH frame individually (frame-level, not averaged -- averaging was
-diluting short bursts, per your Week 1 notes and yesterday's test).
+diluting short bursts, per your Day 1 notes and yesterday's test).
 
 Returns a list of (category, confidence) tuples, one per frame,
 where category is None if that frame didn't match a target sound.
@@ -84,7 +84,7 @@ def audio_callback(indata, frames, time_info, status):
             print(f"  frame {i}: {category:10s} ({confidence:.3f})")
             matched_any = True
 
-            # Week 3: confirmation rule. Only log when this frame's
+            # Day 3: confirmation rule. Only log when this frame's
             # category matches the immediately preceding frame's
             # category (last_category persists across chunk boundaries).
             if category == last_category:

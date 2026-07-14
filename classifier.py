@@ -47,7 +47,7 @@ if __name__ == "__main__":
 # Doorbell decay/reverb reads as "Mallet percussion" — may need its own handling or just be ignored
 # Frame-level analysis is essential — averaged predictions dilute short bursts into meaninglessness
 
-# --Week 1:
+# --Day 1:
 # YAMNet loads and runs
 # Correct audio loading/resampling to 16kHz
 # Averaged top-5 predictions work

@@ -1,7 +1,7 @@
 """
 mic_stream_test.py
 
-Week 2, Step 1: Prove we can capture live microphone audio in rolling
+Day 2, Step 1: Prove we can capture live microphone audio in rolling
 windows at 16kHz (the sample rate YAMNet requires). No model involved yet
 -- this just confirms audio is flowing correctly before we plug in YAMNet.
 

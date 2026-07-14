@@ -1,4 +1,4 @@
-# EchoAlert: Week 4 Evaluation Findings
+# EchoAlert: Day 4 Evaluation Findings
 
 ## What Was Measured
 

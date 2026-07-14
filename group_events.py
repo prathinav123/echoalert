@@ -2,7 +2,7 @@
 group_events.py
 
 Collapses consecutive same-category detection rows into single "events"
-using a time-gap threshold. This is the Week 4 event-level evaluation
+using a time-gap threshold. This is the Day 4 event-level evaluation
 step (Option A): a sustained sound that produced 5 confirmed frame-pairs
 should count as ONE event, not five, when we compute precision/recall.
 
