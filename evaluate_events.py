@@ -1,11 +1,12 @@
 """
 evaluate_events.py
 
-Day 4 evaluation step. Reads the manually-labeled events_for_labeling.csv
-(event-level ground truth, per the Option A grouping decision) and computes:
+Reads the manually-labeled events_for_labeling.csv (event-level ground
+truth) and computes:
     - A confusion matrix: predicted_label vs actual_label
     - Precision and recall per category
-    - A plain-text summary suitable for pasting into your Day 4 writeup
+    - A row-level flicker report showing transient misclassification
+      within otherwise-correct events
 
 Usage:
     python evaluate_events.py
@@ -22,6 +23,7 @@ DB_PATH = "detections.db"
 
 
 def load_events(csv_path=CSV_PATH):
+    """Loads the labeled events CSV and checks that every row has an actual_label."""
     df = pd.read_csv(csv_path)
     missing = df["actual_label"].isna().sum()
     if missing:
@@ -34,8 +36,9 @@ def load_events(csv_path=CSV_PATH):
 
 def parse_row_ids(row_ids_str):
     """
-    The CSV stores row_ids as a string like "[75, 76, 77, 78, 79]" or
-    "[np.int64(74)]" (depending on how it was exported). Handles both.
+    row_ids is stored in the CSV as a string like "[75, 76, 77]" or
+    "[np.int64(74)]" depending on how it was exported. Handles both
+    formats and returns a real Python list of ints.
     """
     cleaned = row_ids_str.replace("np.int64(", "").replace(")", "")
     return ast.literal_eval(cleaned)
@@ -43,9 +46,9 @@ def parse_row_ids(row_ids_str):
 
 def compute_row_level_flicker(events_df, db_path=DB_PATH):
     """
-    For each event, pulls back the raw per-frame rows from detections.db
-    and checks how many of them disagree with the event's actual_label.
-    This surfaces transient misclassification (e.g. a ringtone briefly
+    For each event, pulls back its raw per-frame rows from detections.db
+    and checks how many disagree with the event's actual_label. This
+    surfaces transient misclassification (e.g. a ringtone briefly
     flickering to "alarm") that gets hidden once rows are merged into a
     single event for the main confusion matrix.
     """
@@ -80,6 +83,7 @@ def compute_row_level_flicker(events_df, db_path=DB_PATH):
 
 
 def evaluate(df):
+    """Builds the confusion matrix and precision/recall/F1 table for the labeled events."""
     labels = sorted(set(df["predicted_label"]) | set(df["actual_label"]))
 
     cm = confusion_matrix(df["actual_label"], df["predicted_label"], labels=labels)
@@ -122,10 +126,10 @@ if __name__ == "__main__":
 
     print()
     print("=== Row-level flicker report (per event) ===")
-    print("This shows transient misclassification WITHIN each confirmed event --")
+    print("Shows transient misclassification WITHIN each confirmed event --")
     print("frames that briefly disagreed with the event's true label. This is")
     print("hidden by event-level accuracy above, since a merged event only needs")
-    print("agreement on the *overall* label, not every individual frame.\n")
+    print("agreement on the overall label, not every individual frame.\n")
 
     flicker_df = compute_row_level_flicker(df)
     pd.set_option("display.max_colwidth", None)

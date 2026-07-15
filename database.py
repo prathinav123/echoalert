@@ -1,9 +1,7 @@
 """
 database.py
 
-Sets up and manages the SQLite database that logs every sound EchoAlert
-detects. This is the persistence layer Day 3 builds alerts and the
-Streamlit dashboard on top of.
+Handles the SQLite database that stores every sound EchoAlert detects.
 
 Schema:
     detections
@@ -12,8 +10,7 @@ Schema:
     timestamp       TEXT     -- ISO 8601, e.g. "2026-07-12T14:32:01"
     predicted_label TEXT     -- the mapped category (doorbell, alarm, etc.)
     confidence      REAL     -- YAMNet's confidence score for that frame
-    actual_label    TEXT     -- left NULL for now; filled in manually during
-                                Day 4's evaluation pass
+    actual_label    TEXT     -- the true label, filled in manually during evaluation
 """
 
 import sqlite3
@@ -24,8 +21,8 @@ DB_PATH = "detections.db"
 
 def init_db(db_path=DB_PATH):
     """
-    Creates the detections table if it doesn't already exist. Safe to
-    call every time the app starts up -- won't wipe existing data.
+    Creates the detections table if it doesn't already exist.
+    Safe to call every time the app starts -- it never wipes existing data.
     """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -44,11 +41,9 @@ def init_db(db_path=DB_PATH):
 
 def insert_detection(predicted_label, confidence, db_path=DB_PATH):
     """
-    Logs a single detection event. Call this from mic_yamnet_live.py
-    whenever a frame's category + confidence crosses your threshold
-    (and, once you decide on it, passes the frame-agreement rule).
-
-    timestamp is generated here automatically -- no need to pass one in.
+    Logs one confirmed detection event with the current timestamp.
+    confidence is cast to a plain float, since SQLite stores numpy
+    float types as raw bytes (BLOB) instead of numbers if left as-is.
     """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -62,9 +57,9 @@ def insert_detection(predicted_label, confidence, db_path=DB_PATH):
 
 def get_recent_detections(limit=20, db_path=DB_PATH):
     """
-    Returns the most recent N detections, newest first. This is what
-    the Streamlit dashboard will call to show a live feed.
-    Returns a list of tuples: (id, timestamp, predicted_label, confidence, actual_label)
+    Returns the most recent N detections, newest first, as a list of
+    tuples: (id, timestamp, predicted_label, confidence, actual_label).
+    Used by the dashboard to show a live feed.
     """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -80,9 +75,7 @@ def get_recent_detections(limit=20, db_path=DB_PATH):
 
 
 if __name__ == "__main__":
-    # Quick manual test: set up the table, insert a fake detection,
-    # then read it back. Run this file directly to sanity check the
-    # schema before wiring it into the live mic script.
+    # Quick manual check: create the table, insert one test row, print it back.
     init_db()
     insert_detection("doorbell", 0.42)
     print("Inserted a test detection. Recent rows:")

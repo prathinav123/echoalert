@@ -1,25 +1,24 @@
 """
 alerts.py
 
-Fires desktop notifications for confirmed EchoAlert detections, with a
-per-category cooldown so a single ongoing sound (e.g. an alarm ringing
-for 10 seconds) doesn't spam the user with a notification every time a
-frame-pair confirms -- just once, then silence until either the sound
-stops and restarts, or the cooldown window passes.
+Sends desktop notifications for confirmed sound detections. A per-category
+cooldown stops a single ongoing sound (e.g. an alarm ringing for 10 seconds)
+from spamming the user with a notification every time it's re-confirmed --
+just one alert, then silence until the cooldown passes or the sound
+category changes.
 """
 
 import time
 from plyer import notification
 
-# Seconds to wait before allowing another notification for the SAME
-# category. Tune this once you've lived with it -- 10s is a reasonable
-# starting guess: long enough to not spam, short enough that a second
-# real event (e.g. the doorbell rings again a bit later) still alerts.
+# How many seconds to wait before allowing another notification for the
+# SAME category. 10s is a reasonable default: long enough to avoid spam,
+# short enough that a genuinely new event still gets through.
 COOLDOWN_SECONDS = 10
 
-# Friendly, human-readable text for each category. Keeps the actual
-# notification wording separate from the internal category names, so
-# you can adjust tone/wording here without touching detection logic.
+# Human-readable text shown in the notification for each category.
+# Kept separate from detection logic so wording can be changed here
+# without touching anything else.
 ALERT_MESSAGES = {
     "doorbell": "Doorbell",
     "alarm": "Alarm sound detected",
@@ -31,27 +30,22 @@ ALERT_MESSAGES = {
 }
 
 # Tracks the last time each category successfully fired a notification.
-# Lives at module level (not inside a function) so it persists across
-# repeated calls to maybe_alert() for the life of the running program --
-# same reasoning as last_category in mic_yamnet_live.py.
+# Lives at module level so it persists across repeated calls for as long
+# as the program runs.
 _last_alert_time = {}
 
 
 def maybe_alert(category, confidence):
     """
-    Fires a desktop notification for `category` if enough time has
-    passed since the last notification for that same category.
-    Returns True if a notification was actually sent, False if it was
-    suppressed by the cooldown.
-
-    Call this right alongside insert_detection() -- both should fire
-    off the same "confirmed detection" event in mic_yamnet_live.py.
+    Fires a desktop notification for `category` if the cooldown for that
+    category has passed. Returns True if a notification was sent, False
+    if it was suppressed by the cooldown or failed to send.
     """
     now = time.time()
     last_time = _last_alert_time.get(category, 0)
 
     if now - last_time < COOLDOWN_SECONDS:
-        return False  # still in cooldown, stay quiet
+        return False  # still in cooldown
 
     message = ALERT_MESSAGES.get(category, category)
     try:
@@ -62,8 +56,8 @@ def maybe_alert(category, confidence):
         )
     except Exception as e:
         # Desktop notifications can fail for OS-specific reasons (missing
-        # backend, permissions, etc.) -- don't let a notification failure
-        # crash the whole detection loop over something non-critical.
+        # backend, permissions, etc.) -- don't crash the detection loop
+        # over a non-critical failure.
         print(f"[alerts] Failed to send notification: {e}")
         return False
 
@@ -72,8 +66,8 @@ def maybe_alert(category, confidence):
 
 
 if __name__ == "__main__":
-    # Quick manual test: fire one alert, then immediately try a second
-    # one for the same category -- it should be suppressed by cooldown.
+    # Quick manual test: fire one alert, then immediately try a second one
+    # for the same category -- the second should be suppressed by cooldown.
     print("Firing first alert (should show a notification)...")
     sent = maybe_alert("doorbell", 0.85)
     print(f"Sent: {sent}")

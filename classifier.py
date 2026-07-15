@@ -1,3 +1,11 @@
+"""
+classifier.py
+
+Loads YAMNet and runs it on a pre-recorded audio file, printing the
+top predicted label for each frame of the file. This is the simplest
+possible test of the model before wiring it into live microphone input.
+"""
+
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -6,28 +14,27 @@ import soundfile as sf
 import librosa
 
 
-# Load YAMNet from TF Hub
+# Load the pretrained YAMNet model from TensorFlow Hub.
 yamnet_model = hub.load('https://tfhub.dev/google/yamnet/1')
 
-# Load YAMNet's class names (the ~521 labels it can predict)
+# Load YAMNet's list of ~521 class names, in the same order as its output scores.
 class_map_path = yamnet_model.class_map_path().numpy().decode('utf-8')
 class_names = list(pd.read_csv(class_map_path)['display_name'])
 
 
-
 def load_audio(file_path):
+    """Loads an audio file as mono, 16kHz float32 -- the format YAMNet requires."""
     waveform, sr = librosa.load(file_path, sr=16000, mono=True)
     return waveform.astype(np.float32)
 
-# def load_audio(file_path):
-#     waveform, sr = sf.read(file_path, dtype='float32')
-#     if sr != 16000:
-#         raise ValueError(f"Expected 16kHz sample rate, got {sr}. Resample first.")
-#     if waveform.ndim > 1:
-#         waveform = waveform.mean(axis=1)  # convert stereo to mono
-#     return waveform
 
 def predict(file_path):
+    """
+    Runs YAMNet on a file and prints the top-scoring label for each
+    frame. Frame-level output is used instead of averaging scores
+    across the whole clip, since averaging tends to dilute short,
+    sudden sounds down to near-zero confidence.
+    """
     waveform = load_audio(file_path)
     scores, embeddings, spectrogram = yamnet_model(waveform)
     scores_np = scores.numpy()  # shape: (num_frames, 521)
@@ -39,16 +46,7 @@ def predict(file_path):
         top_idx = np.argmax(frame_scores)
         print(f"Frame {frame_idx}: {class_names[top_idx]} ({frame_scores[top_idx]:.3f})")
 
+
 if __name__ == "__main__":
     predict("iphone_alarm.wav")
     predict("doorbell-chime.wav")
-
-# Alarm-type sounds cluster across Telephone/Ringtone/Beep/Ding — needs multi-label grouping
-# Doorbell decay/reverb reads as "Mallet percussion" — may need its own handling or just be ignored
-# Frame-level analysis is essential — averaged predictions dilute short bursts into meaninglessness
-
-# --Day 1:
-# YAMNet loads and runs
-# Correct audio loading/resampling to 16kHz
-# Averaged top-5 predictions work
-# Frame-by-frame predictions work and reveal real, useful behavior

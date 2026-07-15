@@ -1,15 +1,14 @@
 """
 mic_yamnet_live.py
 
-Day 2, Step 2 (v2): Feed each live 1-second mic window into YAMNet,
-look at frame-level predictions (not averaged), and filter them down
-to EchoAlert's target categories using label_mapping.py.
+Feeds each live 1-second mic window into YAMNet, looks at frame-level
+predictions (not averaged), and filters them down to EchoAlert's
+target categories using label_mapping.py.
 
-Day 3 addition: log confirmed detections to the database. A detection
-is only "confirmed" (and written to SQLite) when two consecutive
-frames -- possibly spanning chunk boundaries -- agree on the same
-category. This kills single-frame flicker without diluting real
-sustained sounds the way full averaging would.
+A detection is only "confirmed" (and written to the database) when two
+consecutive frames -- possibly spanning chunk boundaries -- agree on
+the same category. This filters out single-frame flicker without
+diluting real sustained sounds the way full averaging would.
 
 Press Ctrl+C to stop.
 """
@@ -35,27 +34,28 @@ class_map_path = yamnet_model.class_map_path().numpy().decode('utf-8')
 class_names = list(pd.read_csv(class_map_path)['display_name'])
 print("Model loaded.\n")
 
-# --- Day 3: set up the database once at startup ---
+# --- Set up the database once at startup ---
 init_db()
 
-# --- Day 3: state tracked across callback calls, for the
-# 2-consecutive-frame confirmation rule. This has to live outside
-# audio_callback (not as a local variable) because sounddevice calls
-# audio_callback fresh every ~1s chunk -- a local variable would reset
-# every time and could never "remember" the previous frame's category.
+# State tracked across audio callback calls, used for the
+# 2-consecutive-frame confirmation rule. This has to live at module
+# level (not as a local variable inside audio_callback) because
+# sounddevice calls audio_callback fresh for every ~1s chunk -- a local
+# variable would reset each time and could never "remember" the
+# previous frame's category.
 last_category = None
 last_confidence = None
 
 
-"""
-Runs YAMNet on a waveform and returns a per-frame breakdown, checking
-EACH frame individually (frame-level, not averaged -- averaging was
-diluting short bursts, per your Day 1 notes and yesterday's test).
-
-Returns a list of (category, confidence) tuples, one per frame,
-where category is None if that frame didn't match a target sound.
-"""
 def predict_from_waveform(waveform, debug=False):
+    """
+    Runs YAMNet on a waveform and checks each frame individually
+    (frame-level, not averaged -- averaging dilutes short sound bursts
+    into near-zero confidence).
+
+    Returns a list of (category, confidence) tuples, one per frame,
+    where category is None if that frame didn't match a target sound.
+    """
     scores, embeddings, spectrogram = yamnet_model(waveform)
     scores_np = scores.numpy()
 
@@ -67,6 +67,7 @@ def predict_from_waveform(waveform, debug=False):
 
 
 def audio_callback(indata, frames, time_info, status):
+    """Called by sounddevice for every new audio chunk; runs detection and logging."""
     global last_category, last_confidence
 
     if status:
@@ -76,17 +77,18 @@ def audio_callback(indata, frames, time_info, status):
     frame_results = predict_from_waveform(waveform, debug=True)
 
     # A ~1 second chunk contains a couple of YAMNet frames (~0.48s each).
-    # Print each frame's result so we can see what's actually happening
-    # inside a single chunk, rather than collapsing it into one line.
+    # Each frame's result is printed separately so it's clear what's
+    # happening inside a single chunk, rather than collapsing it into
+    # one line.
     matched_any = False
     for i, (category, confidence) in enumerate(frame_results):
         if category is not None:
             print(f"  frame {i}: {category:10s} ({confidence:.3f})")
             matched_any = True
 
-            # Day 3: confirmation rule. Only log when this frame's
-            # category matches the immediately preceding frame's
-            # category (last_category persists across chunk boundaries).
+            # Confirmation rule: only log when this frame's category
+            # matches the immediately preceding frame's category.
+            # last_category persists across chunk boundaries.
             if category == last_category:
                 insert_detection(category, confidence)
                 maybe_alert(category, confidence)
@@ -95,8 +97,8 @@ def audio_callback(indata, frames, time_info, status):
             last_category = category
             last_confidence = confidence
         else:
-            # An unmatched frame breaks the streak -- a stray silent/
-            # background frame in between two real detections shouldn't
+            # An unmatched frame breaks the streak -- a stray silent or
+            # background frame between two real detections shouldn't
             # let them count as "consecutive."
             last_category = None
             last_confidence = None

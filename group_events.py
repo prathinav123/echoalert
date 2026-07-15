@@ -1,10 +1,11 @@
 """
 group_events.py
 
-Collapses consecutive same-category detection rows into single "events"
-using a time-gap threshold. This is the Day 4 event-level evaluation
-step (Option A): a sustained sound that produced 5 confirmed frame-pairs
-should count as ONE event, not five, when we compute precision/recall.
+Collapses consecutive same-category detection rows into single
+"events" using a time-gap threshold. A sustained sound that produced
+5 confirmed frame-pairs should count as ONE event, not five, when
+computing precision/recall -- otherwise long sounds would be
+overrepresented compared to short ones.
 
 Usage:
     python group_events.py
@@ -20,6 +21,7 @@ START_FROM = "2026-07-14T00:00:00"  # ignore older leftover test rows
 
 
 def load_detections(db_path=DB_PATH, start_from=START_FROM):
+    """Loads all detection rows from start_from onward, ordered by time."""
     conn = sqlite3.connect(db_path)
     df = pd.read_sql_query(
         "SELECT id, timestamp, predicted_label, confidence, actual_label "
@@ -67,8 +69,8 @@ def group_into_events(df, gap_threshold=GAP_THRESHOLD_SECONDS):
                 "row_ids": current_ids,
                 "avg_confidence": sum(current_confidences) / len(current_confidences),
                 "max_confidence": max(current_confidences),
-                "actual_label": "",  # you'll fill this in by hand
-                "notes": "",  # you'll fill this in by hand
+                "actual_label": "",  # filled in by hand during labeling
+                "notes": "",  # filled in by hand during labeling
             })
             current_ids = [row["id"]]
             current_label = row["predicted_label"]
@@ -103,6 +105,7 @@ if __name__ == "__main__":
     pd.set_option("display.width", 140)
     print(events[["event_start", "predicted_label", "row_count", "avg_confidence", "max_confidence", "row_ids"]])
 
-    # Save to CSV so you can label actual_label in a spreadsheet if you'd rather not edit in terminal
+    # Save to CSV so actual_label can be filled in from a spreadsheet
+    # instead of editing directly in the terminal.
     events.to_csv("events_for_labeling.csv", index=False)
-    print("\nSaved to events_for_labeling.csv — fill in the actual_label column there.")
+    print("\nSaved to events_for_labeling.csv -- fill in the actual_label column there.")
